@@ -1,6 +1,4 @@
-import { Document } from 'mongoose';
-
-export class TokenInfo extends Document{
+export class TokenInfoDto {
     name: string;
     symbol: string;
     imgUrl: string;

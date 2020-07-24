@@ -6,7 +6,7 @@ export class TokenNetworkCreated extends Document implements IEventMetadata {
     blockHash: string;
     blockNumber: number;
     logIndex: number;
-    removed: false;
+    removed: boolean;
     transactionHash: string;
     transactionIndex: number;
     id: string;

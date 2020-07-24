@@ -8,7 +8,7 @@ const mongodb = 'mongodb://localhost:27017/raiden-map'
 
 @Module({
   imports: [
-    MongooseModule.forRoot(mongodb, {}),
+    MongooseModule.forRoot(mongodb, {useFindAndModify: false}),
     PollerModule,
   ],
   controllers: [AppController],

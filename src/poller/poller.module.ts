@@ -12,6 +12,8 @@ import { ContractsScraperService } from 'src/services/contracts-scraper.service'
 import { EventsScannerService } from 'src/services/events-scanner.service';
 import Web3 from 'web3'
 import { environments } from 'src/environments/environments';
+import { TokenInfoService } from 'src/services/token-info.service';
+import { ToTokenInfoPipe } from 'src/pipes/to-token-info.pipe';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { environments } from 'src/environments/environments';
     PollerService,
     ContractsScraperService,
     EventsScannerService,
+    TokenInfoService,
+    ToTokenInfoPipe,
     {
       provide: 'web3',
       useFactory: () => new Web3(environments.ethMainnetNode),

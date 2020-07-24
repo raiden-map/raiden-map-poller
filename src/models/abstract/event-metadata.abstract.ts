@@ -1,16 +1,17 @@
 import { IEventMetadata } from "../interface/event-metadata.interface";
 import { Expose, Transform, Exclude } from "class-transformer";
+import { EventData } from 'web3-eth-contract';
 
-export abstract class EventMetadata implements IEventMetadata{
+export abstract class EventMetadata implements IEventMetadata {
     @Expose() address: string;
-    @Expose() blockHash: string;
+    @Exclude() blockHash: string;
     @Expose() blockNumber: number;
-    @Expose() logIndex: number;
-    @Expose() removed: boolean;
+    @Exclude() logIndex: number;
+    @Exclude() removed: boolean;
     @Expose() transactionHash: string;
-    @Expose() transactionIndex: number;
-    @Expose() id: string;
+    @Exclude() transactionIndex: number;
+    @Exclude() id: string;
     @Expose() event: string;
-    @Expose() signature: string;
+    @Exclude() signature: string;
     returnValues: {}
 }

@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 @Injectable()
 export class TokenInfoService {
     constructor(
-        @InjectModel('TokenInfo') private readonly tokenInfo: Model<TokenInfo>,
+        @InjectModel('TokenInfo') private readonly tokenInfoModel: Model<TokenInfo>,
         private readonly http: HttpService,
         private readonly toTokenInfoPipe: ToTokenInfoPipe,
     ) { }
@@ -26,6 +26,6 @@ export class TokenInfoService {
 
     async saveTokenInfo(contractAddress: string): Promise<TokenInfo> {
         const tokenInfo: TokenInfoDto = await this.getTokenInfo(contractAddress)
-        return await this.tokenInfo.findOneAndUpdate({ contract: contractAddress }, { $setOnInsert: tokenInfo }, { upsert: true }).exec()
+        return await this.tokenInfoModel.findOneAndUpdate({ contract: contractAddress.toLowerCase() }, { $setOnInsert: tokenInfo }, { upsert: true }).exec()
     }
 }

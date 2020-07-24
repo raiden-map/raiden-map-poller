@@ -1,17 +1,15 @@
-import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { plainToClass } from 'class-transformer';
 import { Model } from 'mongoose';
 import { ChannelOpened } from 'src/models/channel-opened.model';
+import { TokenNetworkCreatedDto } from 'src/models/dto/token-network-created.dto';
+import { TokenNetworkCreated } from 'src/models/token-network-created.model';
 import { ContractsScraperService } from 'src/services/contracts-scraper.service';
 import { EventsScannerService } from 'src/services/events-scanner.service';
-import { Contract, EventData } from 'web3-eth-contract';
-import Web3 from 'web3';
-import { plainToClass } from 'class-transformer';
-import { TokenNetworkCreated } from 'src/models/token-network-created.model';
-import { TokenNetworkCreatedDto } from 'src/models/dto/token-network-created.dto';
 import { TokenInfoService } from 'src/services/token-info.service';
-import { TokenInfo } from 'src/models/token-info.model';
-import { TokenInfoDto } from 'src/models/dto/token-info.dto';
+import Web3 from 'web3';
+import { Contract, EventData } from 'web3-eth-contract';
 
 @Injectable()
 export class PollerService implements OnModuleInit {
@@ -25,9 +23,9 @@ export class PollerService implements OnModuleInit {
     ) { }
 
     async onModuleInit() {
-
     }
     async init() {
+
         const tokenRegistryContractAddress: string = await this.contractsScraperService.getTokenRegistryContract()
         const tokenRegistryContract: Contract = await this.initContractObject(tokenRegistryContractAddress)
 

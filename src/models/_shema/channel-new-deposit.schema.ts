@@ -1,6 +1,7 @@
 import { Schema } from 'mongoose';
 
-export const ChannelOpenedSchema = new Schema({
+export const ChannelNewDepositSchema = new Schema({
+    blockTimestamp: Number,
     address: String,
     blockHash: String,
     blockNumber: Number,
@@ -13,8 +14,7 @@ export const ChannelOpenedSchema = new Schema({
     signature: String,
     returnValues: {
         channel_identifier: Number,
-        participant1: String,
-        participant2: String,
-        settle_timeout: Number,
+        participant: String,
+        total_deposit: Number,
     }
 })

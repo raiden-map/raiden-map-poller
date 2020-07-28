@@ -1,6 +1,7 @@
 import { Schema } from 'mongoose';
 
-export const ChannelSettledSchema = new Schema({
+export const ChannelWithdrawSchema = new Schema({
+    blockTimestamp: Number,
     address: String,
     blockHash: String,
     blockNumber: Number,
@@ -13,9 +14,7 @@ export const ChannelSettledSchema = new Schema({
     signature: String,
     returnValues: {
         channel_identifier: Number,
-        participant1_amount: Number,
-        participant1_locksroot: String,
-        participant2_amount: Number,
-        participant2_locksroot: String,
+        participant: String,
+        total_withdraw: Number,
     }
 })

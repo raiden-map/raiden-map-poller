@@ -1,35 +1,39 @@
+import Web3 from 'web3'
 import { Module, HttpModule } from '@nestjs/common';
 import { PollerService } from './poller.service';
 import { PollerController } from './poller.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ChannelOpenedSchema } from 'src/models/shema/channel-opened.schema';
-import { ChannelClosedSchema } from 'src/models/shema/channel-closed.schema';
-import { ChannelNewDepositSchema } from 'src/models/shema/channel-new-deposit.schema';
-import { ChannelSettledSchema } from 'src/models/shema/channel-settled.schema';
-import { TokenNetworkCreatedSchema } from 'src/models/shema/token-network-created.schema';
-import { TokenInfoSchema } from 'src/models/shema/token-info.schema';
-import { ContractsScraperService } from 'src/services/contracts-scraper.service';
+import { SmartContractService } from 'src/services/smart-contract.service';
 import { EventsScannerService } from 'src/services/events-scanner.service';
-import Web3 from 'web3'
 import { environments } from 'src/environments/environments';
 import { TokenInfoService } from 'src/services/token-info.service';
 import { ToTokenInfoPipe } from 'src/pipes/to-token-info.pipe';
+import { TokenNetworkCreated, TokenNetworkCreatedSchema } from 'src/models/token-network-created.model';
+import { TokenInfoSchema, TokenInfo } from 'src/models/token-info.model';
+import { ChannelSettled, ChannelSettledSchema } from 'src/models/channel-settled.model';
+import { ChannelNewDeposit, ChannelNewDepositSchema } from 'src/models/channel-new-deposit.model';
+import { ChannelClosed, ChannelClosedSchema } from 'src/models/channel-closed.model';
+import { ChannelOpened, ChannelOpenedSchema } from 'src/models/channel-opened.model';
+import { ChannelWithdrawSchema, ChannelWithdraw } from 'src/models/channel-withdraw.model';
+import { NonClosingBalanceProofUpdatedSchema, NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-proof-updated.model';
 
 @Module({
   imports: [
     HttpModule,
     MongooseModule.forFeature([
-      { name: 'ChannelOpened', schema: ChannelOpenedSchema },
-      { name: 'ChannelClosed', schema: ChannelClosedSchema },
-      { name: 'ChannelNewDeposit', schema: ChannelNewDepositSchema },
-      { name: 'ChannelSettled', schema: ChannelSettledSchema },
-      { name: 'TokenNetworkCreated', schema: TokenNetworkCreatedSchema },
-      { name: 'TokenInfo', schema: TokenInfoSchema },
+      { name: ChannelOpened.name, schema: ChannelOpenedSchema },
+      { name: ChannelClosed.name, schema: ChannelClosedSchema },
+      { name: ChannelNewDeposit.name, schema: ChannelNewDepositSchema },
+      { name: ChannelSettled.name, schema: ChannelSettledSchema },
+      { name: ChannelWithdraw.name, schema: ChannelWithdrawSchema },
+      { name: NonClosingBalanceProofUpdated.name, schema: NonClosingBalanceProofUpdatedSchema },
+      { name: TokenNetworkCreated.name, schema: TokenNetworkCreatedSchema },
+      { name: TokenInfo.name, schema: TokenInfoSchema },
     ]),
   ],
   providers: [
     PollerService,
-    ContractsScraperService,
+    SmartContractService,
     EventsScannerService,
     TokenInfoService,
     ToTokenInfoPipe,

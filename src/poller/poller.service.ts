@@ -1,35 +1,39 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { plainToClass } from 'class-transformer';
-import { Model } from 'mongoose';
+import { Model, Mongoose } from 'mongoose';
 import { ChannelOpened } from 'src/models/channel-opened.model';
 import { TokenNetworkCreatedDto } from 'src/models/dto/token-network-created.dto';
 import { TokenNetworkCreated } from 'src/models/token-network-created.model';
-import { ContractsScraperService } from 'src/services/contracts-scraper.service';
+import { SmartContractService } from 'src/services/smart-contract.service';
 import { EventsScannerService } from 'src/services/events-scanner.service';
 import { TokenInfoService } from 'src/services/token-info.service';
 import Web3 from 'web3';
 import { Contract, EventData } from 'web3-eth-contract';
-
+import { Schema, model } from 'mongoose'
+import { EventDataExtended } from 'src/models/common/event-data-extended.common';
+import greenlet from 'greenlet'
 @Injectable()
 export class PollerService implements OnModuleInit {
+    greenlet
     constructor(
-        @InjectModel('TokenNetworkCreated') private readonly tokenNetworkCreatedModel: Model<TokenNetworkCreated>,
-        @InjectModel('ChannelOpened') private readonly channelOpenedModel: Model<ChannelOpened>,
+        @InjectModel(TokenNetworkCreated.name) private readonly tokenNetworkCreatedModel: Model<TokenNetworkCreated>,
         @Inject('web3') private readonly web3: Web3,
-        private readonly contractsScraperService: ContractsScraperService,
+        private readonly smartContractService: SmartContractService,
         private readonly eventsScannerService: EventsScannerService,
         private readonly tokenInfoService: TokenInfoService,
-    ) { }
+    ) {
+    }
 
     async onModuleInit() {
-    }
-    async init() {
 
-        const tokenRegistryContractAddress: string = await this.contractsScraperService.getTokenRegistryContract()
-        const tokenRegistryContract: Contract = await this.initContractObject(tokenRegistryContractAddress)
+        // }
+        // async init() {
+        const tokenRegistryContractAddress: string = await this.smartContractService.getTokenRegistryContract()
+        const tokenRegistryContract: Contract = await this.smartContractService.initContractObject(tokenRegistryContractAddress)
 
-        const tokenNetworksEvent: EventData[] = await this.eventsScannerService.getAllEvent(tokenRegistryContract)
+        //TODO call getAndSaveNewEvents or scanTokenNetworkContractEvents
+        const tokenNetworksEvent: EventDataExtended[] = await this.eventsScannerService.getAllEvents(tokenRegistryContract)
         const tokenNetworks: TokenNetworkCreatedDto[] = tokenNetworksEvent.map(tokenNetwork => plainToClass(TokenNetworkCreatedDto, tokenNetwork, { enableImplicitConversion: true, excludeExtraneousValues: true }))
 
         tokenNetworks.forEach(async tokenNetwork => {
@@ -37,17 +41,18 @@ export class PollerService implements OnModuleInit {
             await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address)
         })
 
-        const tokenNetworkContracts: Contract[] = await Promise.all(tokenNetworks.map(async tokenNetwork => await this.initContractObject(tokenNetwork.returnValues.token_network_address)))
+        const tokenNetworkContracts: Contract[] = await Promise.all(
+            tokenNetworks.map(
+                async tokenNetwork => await this.smartContractService.initContractObject(tokenNetwork.returnValues.token_network_address)
+            )
+        )
 
-        const event: EventData[] = await this.eventsScannerService.getAllEvent(tokenNetworkContracts[1])
+        const event: EventDataExtended[] = await this.eventsScannerService.getAllEvents(tokenNetworkContracts[1])
+        tokenNetworkContracts.map(tnc => this.eventsScannerService.scanSmartContractEvents(tnc))
     }
 
 
-    async initContractObject(contractAddress: string): Promise<Contract> {
-        const contractABI: [] = await this.contractsScraperService.getContractABI(contractAddress)
-        const contract: Contract = new this.web3.eth.Contract(contractABI, contractAddress)
-        return contract
-    }
+
 
 
 }

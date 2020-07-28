@@ -1,4 +1,5 @@
 export interface IEventMetadata {
+    blockTimestamp: number;
     address: string;
     blockHash: string;
     blockNumber: number;

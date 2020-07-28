@@ -1,6 +1,5 @@
-import { Document } from 'mongoose';
+import { Exclude, Expose } from 'class-transformer';
 import { EventMetadata } from '../abstract/event-metadata.abstract';
-import { Expose, Transform, Exclude, plainToClass } from 'class-transformer';
 class Result{
     @Expose()
     token_address: string;

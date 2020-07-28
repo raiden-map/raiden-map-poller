@@ -1,6 +1,7 @@
 import { Schema } from 'mongoose';
 
-export const TokenNetworkCreatedSchema = new Schema({
+export const NonClosingBalanceProofUpdatedSchema = new Schema({
+    blockTimestamp: Number,
     address: String,
     blockHash: String,
     blockNumber: Number,
@@ -12,7 +13,9 @@ export const TokenNetworkCreatedSchema = new Schema({
     event: String,
     signature: String,
     returnValues: {
-        token_address: String,
-        token_network_address: String,
+        channel_identifier: Number,
+        closing_participant: String,
+        nonce: Number,
+        balance_hash: String,
     }
 })

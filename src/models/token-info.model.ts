@@ -1,10 +1,14 @@
 import { Document } from 'mongoose';
+import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 
-export class TokenInfo extends Document{
-    name: string;
-    symbol: string;
-    imgUrl: string;
-    homepage: string;
-    twitterName: string;
-    contract: string;
+@Schema()
+export class TokenInfo extends Document {
+    @Prop() name: string;
+    @Prop() symbol: string;
+    @Prop() imgUrl: string;
+    @Prop() homepage: string;
+    @Prop() twitterName: string;
+    @Prop() contract: string;
 }
+
+export const TokenInfoSchema = SchemaFactory.createForClass(TokenInfo);

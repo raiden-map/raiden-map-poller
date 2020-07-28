@@ -3,6 +3,7 @@ import { Expose, Transform, Exclude } from "class-transformer";
 import { EventData } from 'web3-eth-contract';
 
 export abstract class EventMetadata implements IEventMetadata {
+    @Expose() blockTimestamp: number;
     @Expose() address: string;
     @Exclude() blockHash: string;
     @Expose() blockNumber: number;

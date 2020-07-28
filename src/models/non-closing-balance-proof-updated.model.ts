@@ -1,10 +1,10 @@
-import { EventMetadata } from "./abstract/event-metadata.abstract";
-import { IEventMetadata } from "./interface/event-metadata.interface";
+import { Exclude, Expose } from 'class-transformer';
+import { IEventMetadata } from './interface/event-metadata.interface';
+import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { Schema, Prop, SchemaFactory } from "@nestjs/mongoose";
 
 @Schema()
-export class ChannelClosed extends Document implements IEventMetadata {
+export class NonClosingBalanceProofUpdated extends Document implements IEventMetadata {
     @Prop() blockTimestamp: number;
     @Prop() address: string;
     @Prop() blockHash: string;
@@ -24,4 +24,4 @@ export class ChannelClosed extends Document implements IEventMetadata {
     }
 }
 
-export const ChannelClosedSchema = SchemaFactory.createForClass(ChannelClosed);
+export const NonClosingBalanceProofUpdatedSchema = SchemaFactory.createForClass(NonClosingBalanceProofUpdated);

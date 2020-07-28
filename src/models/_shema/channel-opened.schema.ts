@@ -1,6 +1,7 @@
 import { Schema } from 'mongoose';
 
-export const ChannelClosedSchema = new Schema({
+export const ChannelOpenedSchema = new Schema({
+    blockTimestamp: Number,
     address: String,
     blockHash: String,
     blockNumber: Number,
@@ -13,8 +14,8 @@ export const ChannelClosedSchema = new Schema({
     signature: String,
     returnValues: {
         channel_identifier: Number,
-        closing_participant: String,
-        nonce: Number,
-        balance_hash: String,
+        participant1: String,
+        participant2: String,
+        settle_timeout: Number,
     }
 })

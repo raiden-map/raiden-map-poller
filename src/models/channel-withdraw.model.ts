@@ -1,10 +1,9 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { IEventMetadata } from './interface/event-metadata.interface';
 import { Document } from 'mongoose';
-import { IEventMetadata } from "./interface/event-metadata.interface";
-import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 
 @Schema()
-export class TokenNetworkCreated extends Document implements IEventMetadata {
-
+export class ChannelWithdraw extends Document implements IEventMetadata {
     @Prop() blockTimestamp: number;
     @Prop() address: string;
     @Prop() blockHash: string;
@@ -17,9 +16,11 @@ export class TokenNetworkCreated extends Document implements IEventMetadata {
     @Prop() event: string;
     @Prop() signature: string;
     @Prop() returnValues: {
-        token_address: string;
-        token_network_address: string;
-    };
+        channel_identifier: number;
+        participant: string;
+        total_withdraw: number;
+    }
 }
 
-export const TokenNetworkCreatedSchema = SchemaFactory.createForClass(TokenNetworkCreated);
+export const ChannelWithdrawSchema = SchemaFactory.createForClass(ChannelWithdraw);
+

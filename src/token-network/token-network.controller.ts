@@ -17,7 +17,17 @@ export class TokenNetworkController {
     }
 
     @Get('info/:contract')
-    getTokenInfoOf(@Param() contract: string) {
-        return this.tokenNetworkService.getTokenInfoOf(contract)
+    getTokenInfoOf(@Param() params) {
+        return this.tokenNetworkService.getTokenInfoOf(params.contract)
+    }
+
+    @Get('channel-opened/:contract')
+    getOpenedChannelOf(@Param() params) {
+        return this.tokenNetworkService.getOpenedChannelOf(params.contract)
+    }
+
+    @Get('channel-closed/:contract')
+    getClosedChannelOf(@Param() params) {
+        return this.tokenNetworkService.getClosedChannelOf(params.contract)
     }
 }

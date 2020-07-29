@@ -54,10 +54,10 @@ export class TokenNetworkService {
 
         let res = channelsOpened.concat(channelsClosed).sort((a, b) => a.blockTimestamp - b.blockTimestamp)
 
-        let closed = 0
+        let closedCount = 0
         res.map((event) => {
-            if (event.closed_channels_sum) closed += (event.closed_channels_sum - closed)
-            else event.opened_channels_sum -= closed
+            if (event.closed_channels_sum) closedCount += (event.closed_channels_sum - closedCount)
+            else event.opened_channels_sum -= closedCount
         })
 
         var groupBy = function (xs, key) {
@@ -66,8 +66,9 @@ export class TokenNetworkService {
                 return rv;
             }, {});
         };
-
-        return res
+        const opened = res.filter(ev => ev.closed_channels_sum === undefined)
+        const closed = res.filter(ev => ev.closed_channels_sum !== undefined)
+        return { openedChannel: opened, closedChannel: closed }
     }
 
     private async getOpenedChannelOverview(contract: string, model: Model<any>) {

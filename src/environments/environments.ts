@@ -4,10 +4,4 @@ export const environments = {
     etherScanAPIKey: 'B4AMBFXJIUDH2IPEZNQQZJRD8KP3Z4YIMU',
     getABIUrl: (contractAddress: string, APIKey: string) => `https://api.etherscan.io/api?module=contract&action=getabi&address=${contractAddress}&apikey=${APIKey}`,
     getTokenInfo: (contractAddress: string) => `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`,
-    tokenNetworkEvents: {
-        channelOpened: "ChannelOpened",
-        channelNewDeposit: "ChannelNewDeposit",
-        channelClosed: "ChannelClosed",
-        channelSettled: "ChannelSettled",
-    }
 }

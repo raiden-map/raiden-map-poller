@@ -5,4 +5,5 @@ export class TokenInfoDto {
     homepage: string;
     twitterName: string;
     contract: string;
+    tokenNetwork?: string;
 }

@@ -44,4 +44,63 @@ export class TokenNetworkService {
     async getClosedChannelOf(contract: string): Promise<ChannelClosed[]> {
         return await this.channelClosedModel.find({ address: contract }).exec()
     }
+
+    async getChannelsOf(contract: string) {
+        const channelsOpened: any[] = await this.getOpenedChannelOverview(contract, this.channelOpenedModel)
+        const channelsClosed: any[] = await this.getClosedChannelOverview(contract, this.channelClosedModel)
+
+        channelsClosed.map((channel, index) => { if (index > 0) channel.closed_channels_sum += channelsClosed[index - 1].closed_channels_sum })
+        channelsOpened.map((channel, index) => { if (index > 0) channel.opened_channels_sum += channelsOpened[index - 1].opened_channels_sum })
+
+        let res = channelsOpened.concat(channelsClosed).sort((a, b) => a.blockTimestamp - b.blockTimestamp)
+
+        let closed = 0
+        res.map((event) => {
+            if (event.closed_channels_sum) closed += (event.closed_channels_sum - closed)
+            else event.opened_channels_sum -= closed
+        })
+
+        var groupBy = function (xs, key) {
+            return xs.reduce(function (rv, x) {
+                (rv[x[key]] = rv[x[key]] || []).push(x);
+                return rv;
+            }, {});
+        };
+
+        return res
+    }
+
+    private async getOpenedChannelOverview(contract: string, model: Model<any>) {
+        return await model
+            .aggregate([
+                { $match: { address: contract } },
+                {
+                    $group: {
+                        _id: { blockTimestamp: "$blockTimestamp" },
+                        blockTimestamp: { $first: "$blockTimestamp" },
+                        block: { $first: "$blockNumber" },
+                        opened_channels_sum: { $sum: 1 },
+                        opened_channel_identifiers: { $addToSet: "$returnValues.channel_identifier" }
+                    }
+                },
+                { $project: { _id: 0 } }
+            ]).sort({ 'blockTimestamp': 1 })
+    }
+
+    private async getClosedChannelOverview(contract: string, model: Model<any>) {
+        return await model
+            .aggregate([
+                { $match: { address: contract } },
+                {
+                    $group: {
+                        _id: { blockTimestamp: "$blockTimestamp" },
+                        blockTimestamp: { $first: "$blockTimestamp" },
+                        block: { $first: "$blockNumber" },
+                        closed_channels_sum: { $sum: 1 },
+                        closed_channel_identifiers: { $addToSet: "$returnValues.channel_identifier" }
+                    }
+                },
+                { $project: { _id: 0 } }
+            ]).sort({ 'blockTimestamp': 1 })
+    }
 }

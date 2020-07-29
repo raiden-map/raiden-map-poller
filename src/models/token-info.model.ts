@@ -9,6 +9,7 @@ export class TokenInfo extends Document {
     @Prop() homepage: string;
     @Prop() twitterName: string;
     @Prop() contract: string;
+    @Prop() tokenNetwork: string;
 }
 
 export const TokenInfoSchema = SchemaFactory.createForClass(TokenInfo);

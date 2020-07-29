@@ -52,7 +52,7 @@ export class EventsScannerService {
     }
 
     async scanSmartContractEvents(contract: Contract) {
-        let blockNumber: number = 10000000
+        let blockNumber: number = 10000000 //TODO save lastblock on DB, use it here
         setInterval(async () => {
             let lastBlock = await this.web3.eth.getBlockNumber()
             if (lastBlock > blockNumber) {
@@ -67,7 +67,7 @@ export class EventsScannerService {
     async getAndSaveNewEvents(contract: Contract, fromBlock: number | string, toBlock: number | string) {
         const eventsDataExt: EventDataExtended[] = await this.getEvents(contract, fromBlock, toBlock)
         let events: EventMetadata[] = await Promise.all(eventsDataExt.map(async (event: EventDataExtended) => await this.saveEvent(event, contract.options.address)))
-        Logger.debug(`Getted and saved ${events.length} events from contract: ${contract.options.address}. From ${fromBlock} to ${toBlock}`)
+        Logger.debug(`Getted and saved if not present ${events.length} events from contract: ${contract.options.address}. From ${fromBlock} to ${toBlock}`)
         return events
     }
 

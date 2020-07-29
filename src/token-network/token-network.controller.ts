@@ -30,4 +30,9 @@ export class TokenNetworkController {
     getClosedChannelOf(@Param() params) {
         return this.tokenNetworkService.getClosedChannelOf(params.contract)
     }
+
+    @Get('channel-overview/:contract')
+    getChannelOf(@Param() params) {
+        return this.tokenNetworkService.getChannelsOf(params.contract)
+    }
 }

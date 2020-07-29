@@ -1,18 +1,15 @@
-import { Inject, Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { plainToClass } from 'class-transformer';
-import { Model, Mongoose } from 'mongoose';
-import { ChannelOpened } from 'src/models/channel-opened.model';
+import { Model } from 'mongoose';
+import { EventDataExtended } from 'src/models/common/event-data-extended.common';
 import { TokenNetworkCreatedDto } from 'src/models/dto/token-network-created.dto';
 import { TokenNetworkCreated } from 'src/models/token-network-created.model';
-import { SmartContractService } from 'src/services/smart-contract.service';
 import { EventsScannerService } from 'src/services/events-scanner.service';
+import { SmartContractService } from 'src/services/smart-contract.service';
 import { TokenInfoService } from 'src/services/token-info.service';
 import Web3 from 'web3';
-import { Contract, EventData } from 'web3-eth-contract';
-import { Schema, model } from 'mongoose'
-import { EventDataExtended } from 'src/models/common/event-data-extended.common';
-import greenlet from 'greenlet'
+import { Contract } from 'web3-eth-contract';
 @Injectable()
 export class PollerService implements OnModuleInit {
     greenlet
@@ -27,8 +24,8 @@ export class PollerService implements OnModuleInit {
 
     async onModuleInit() {
 
-        // }
-        // async init() {
+    }
+    async init() {
         const tokenRegistryContractAddress: string = await this.smartContractService.getTokenRegistryContract()
         const tokenRegistryContract: Contract = await this.smartContractService.initContractObject(tokenRegistryContractAddress)
 
@@ -38,7 +35,7 @@ export class PollerService implements OnModuleInit {
 
         tokenNetworks.forEach(async tokenNetwork => {
             await this.tokenNetworkCreatedModel.findOneAndUpdate({ transactionHash: tokenNetwork.transactionHash }, { $setOnInsert: tokenNetwork }, { upsert: true }).exec()
-            await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address)
+            await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address)
         })
 
         const tokenNetworkContracts: Contract[] = await Promise.all(
@@ -47,7 +44,6 @@ export class PollerService implements OnModuleInit {
             )
         )
 
-        const event: EventDataExtended[] = await this.eventsScannerService.getAllEvents(tokenNetworkContracts[1])
         tokenNetworkContracts.map(tnc => this.eventsScannerService.scanSmartContractEvents(tnc))
     }
 

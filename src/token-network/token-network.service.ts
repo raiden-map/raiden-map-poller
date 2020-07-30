@@ -9,6 +9,7 @@ import { ChannelWithdraw } from 'src/models/channel-withdraw.model';
 import { NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-proof-updated.model';
 import { TokenInfo } from 'src/models/token-info.model';
 import { TokenNetworkCreated } from 'src/models/token-network-created.model';
+import { ChannelOpenedStatus, ChannelClosedStatus } from 'src/models/common/channel-event-status.common';
 
 @Injectable()
 export class TokenNetworkService {
@@ -66,8 +67,38 @@ export class TokenNetworkService {
                 return rv;
             }, {});
         };
-        const opened = res.filter(ev => ev.closed_channels_sum === undefined)
-        const closed = res.filter(ev => ev.closed_channels_sum !== undefined)
+        let pastOpenedEvent: ChannelOpenedStatus
+        let pastClosedEvent: ChannelClosedStatus
+        const opened = res.map(ev => {
+            if (ev.closed_channels_sum === undefined) {
+                pastOpenedEvent = ev
+                return ev
+            }
+            else {
+                pastClosedEvent = ev
+                return {
+                    block: ev.block,
+                    blockTimestamp: ev.blockTimestamp,
+                    opened_channel_identifiers: [-1],
+                    opened_channels_sum: pastOpenedEvent.opened_channels_sum,
+                } as ChannelOpenedStatus
+            }
+        })
+        const closed = res.map(ev => {
+            if (ev.closed_channels_sum !== undefined) {
+                pastClosedEvent = ev
+                return ev
+            }
+            else {
+                pastOpenedEvent = ev
+                return {
+                    block: ev.block,
+                    blockTimestamp: ev.blockTimestamp,
+                    closed_channel_identifiers: [-1],
+                    closed_channels_sum: pastClosedEvent.closed_channels_sum,
+                } as ChannelClosedStatus
+            }
+        })
         return { openedChannel: opened, closedChannel: closed }
     }
 

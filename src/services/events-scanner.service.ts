@@ -36,7 +36,7 @@ export class EventsScannerService {
     async getEvents(contract: Contract, fromBlock: number | string, toBlock: number | string): Promise<EventDataExtended[]> {
         const eventsData: EventData[] = await contract.getPastEvents('AllEvents', { fromBlock: fromBlock, toBlock: toBlock })
         const eventsDataExt: EventDataExtended[] = await Promise.all(eventsData.map(async (event: EventData) => {
-            return { ...event, blockTimestamp: (await this.web3.eth.getBlock(event.blockNumber)).timestamp }
+            return { ...event, blockTimestamp: parseInt(((await this.web3.eth.getBlock(event.blockNumber)).timestamp).toString() + '000') }
         }))
         Logger.debug(`${this.getEvents.name}: ${contract.options.address} . From ${fromBlock} to ${toBlock}`)
         return eventsDataExt
@@ -45,7 +45,7 @@ export class EventsScannerService {
     async getAllEvents(contract: Contract): Promise<EventDataExtended[]> {
         const eventsData: EventData[] = await contract.getPastEvents('AllEvents', { fromBlock: 10000000, toBlock: 'latest' })
         const eventsDataExt: EventDataExtended[] = await Promise.all(eventsData.map(async (event: EventData) => {
-            return { ...event, blockTimestamp: (await this.web3.eth.getBlock(event.blockNumber)).timestamp }
+            return { ...event, blockTimestamp: parseInt(((await this.web3.eth.getBlock(event.blockNumber)).timestamp).toString() + '000') }
         }))
         Logger.debug(`${this.getAllEvents.name}: ${contract.options.address}`)
         return eventsDataExt
@@ -100,7 +100,7 @@ export class EventsScannerService {
     private plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended) {
 
         const parsedEvent = plainToClass(type, event, { enableImplicitConversion: true, excludeExtraneousValues: true })
-        model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, { $setOnInsert: parsedEvent }, { upsert: true }).exec()
+        model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, parsedEvent, { upsert: true }).exec()
         return parsedEvent
     }
 }

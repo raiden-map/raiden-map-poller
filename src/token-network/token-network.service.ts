@@ -46,6 +46,10 @@ export class TokenNetworkService {
         return await this.channelClosedModel.find({ address: contract }).exec()
     }
 
+    async getParticipantOverview(contract: string) {
+        return await this.getParticipantOverviewOf(contract, this.channelOpenedModel)
+    }
+
     async getChannelsOf(contract: string) {
         const channelsOpened: any[] = await this.getOpenedChannelOverview(contract, this.channelOpenedModel)
         const channelsClosed: any[] = await this.getClosedChannelOverview(contract, this.channelClosedModel)
@@ -82,13 +86,12 @@ export class TokenNetworkService {
                 lastOpened -= (ev.closed_channels_sum - lastClosed)
                 //Logger.debug(`opened: ${lastOpened - (ev.closed_channels_sum - lastClosed)}, CLOSED: ${ev.closed_channels_sum}`)
                 lastClosed = ev.closed_channels_sum
-                console.log(ev.closed_channels_sum - lastClosed)
             }
         })
 
         return { openedChannel: opened, closedChannel: closed }
     }
-
+    //TODO move on repository pattern
     private async getOpenedChannelOverview(contract: string, model: Model<any>) {
         return await model
             .aggregate([
@@ -106,6 +109,7 @@ export class TokenNetworkService {
             ]).sort({ 'blockTimestamp': 1 })
     }
 
+    //TODO move on repository pattern
     private async getClosedChannelOverview(contract: string, model: Model<any>) {
         return await model
             .aggregate([
@@ -121,6 +125,43 @@ export class TokenNetworkService {
                 },
                 { $project: { _id: 0 } }
             ]).sort({ 'blockTimestamp': 1 })
+    }
+
+    //TODO move on repository pattern
+    private async getParticipantOverviewOf(contract: string, model: Model<any>) {
+        let first = await model
+            .aggregate([
+                { $match: { address: contract } },
+                {
+                    $group: {
+                        _id: {
+                            participant: "$returnValues.participant1",
+                        },
+                        participant: { $first: "$returnValues.participant1" },
+                        count: { $sum: 1 },
+                        channel_identifiers: { $addToSet: "$returnValues.channel_identifier" }
+                    }
+                },
+                { $project: { _id: 0 } }
+            ]).sort({ 'blockTimestamp': 1 })
+        let second = await model
+            .aggregate([
+                { $match: { address: contract } },
+                {
+                    $group: {
+                        _id: {
+                            participant: "$returnValues.participant2",
+                        },
+                        participant: { $first: "$returnValues.participant2" },
+                        count: { $sum: 1 },
+                        channel_identifiers: { $addToSet: "$returnValues.channel_identifier" }
+                    }
+                },
+
+                { $project: { _id: 0 } }
+            ]).sort({ 'blockTimestamp': 1 })
+
+        return first.concat(second)
     }
 }
 

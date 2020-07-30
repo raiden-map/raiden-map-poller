@@ -35,4 +35,9 @@ export class TokenNetworkController {
     getChannelOf(@Param() params) {
         return this.tokenNetworkService.getChannelsOf(params.contract)
     }
+
+    @Get('participant-overview/:contract')
+    getParticipantOverview(@Param() params) {
+        return this.tokenNetworkService.getParticipantOverview(params.contract)
+    }
 }

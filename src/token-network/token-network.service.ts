@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ChannelClosed } from 'src/models/channel-closed.model';
@@ -9,7 +9,7 @@ import { ChannelWithdraw } from 'src/models/channel-withdraw.model';
 import { NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-proof-updated.model';
 import { TokenInfo } from 'src/models/token-info.model';
 import { TokenNetworkCreated } from 'src/models/token-network-created.model';
-import { ChannelOpenedStatus, ChannelClosedStatus } from 'src/models/common/channel-event-status.common';
+import { ChannelOpenedStatus, ChannelClosedStatus, ChannelEventsStatus } from 'src/models/common/channel-event-status.common';
 
 @Injectable()
 export class TokenNetworkService {
@@ -61,44 +61,31 @@ export class TokenNetworkService {
             else event.opened_channels_sum -= closedCount
         })
 
-        var groupBy = function (xs, key) {
-            return xs.reduce(function (rv, x) {
-                (rv[x[key]] = rv[x[key]] || []).push(x);
-                return rv;
-            }, {});
-        };
-        let pastOpenedEvent: ChannelOpenedStatus
-        let pastClosedEvent: ChannelClosedStatus
-        const opened = res.map(ev => {
-            if (ev.closed_channels_sum === undefined) {
-                pastOpenedEvent = ev
-                return ev
-            }
-            else {
-                pastClosedEvent = ev
-                return {
-                    block: ev.block,
-                    blockTimestamp: ev.blockTimestamp,
-                    opened_channel_identifiers: [-1],
-                    opened_channels_sum: pastOpenedEvent.opened_channels_sum,
-                } as ChannelOpenedStatus
-            }
-        })
-        const closed = res.map(ev => {
-            if (ev.closed_channels_sum !== undefined) {
-                pastClosedEvent = ev
-                return ev
-            }
-            else {
-                pastOpenedEvent = ev
-                return {
-                    block: ev.block,
-                    blockTimestamp: ev.blockTimestamp,
-                    closed_channel_identifiers: [-1],
-                    closed_channels_sum: pastClosedEvent.closed_channels_sum,
-                } as ChannelClosedStatus
+        return this.fillMissingEvent(res)
+    }
+
+    fillMissingEvent(res: any[]): { openedChannel: ChannelOpenedStatus[], closedChannel: ChannelClosedStatus[] } {
+        let opened: ChannelOpenedStatus[] = []
+        let closed: ChannelClosedStatus[] = []
+        let lastOpened = 0
+        let lastClosed = 0
+
+        res.forEach(ev => {
+            if (ev.opened_channels_sum) {
+                opened.push(ev)
+                closed.push({ blockTimestamp: ev.blockTimestamp, closed_channels_sum: lastClosed })
+                //Logger.debug(`OPENED: ${ev.opened_channels_sum}, closed: ${lastClosed}`)
+                lastOpened = ev.opened_channels_sum
+            } else {
+                opened.push({ blockTimestamp: ev.blockTimestamp, opened_channels_sum: lastOpened - (ev.closed_channels_sum - lastClosed) })
+                closed.push(ev)
+                lastOpened -= (ev.closed_channels_sum - lastClosed)
+                //Logger.debug(`opened: ${lastOpened - (ev.closed_channels_sum - lastClosed)}, CLOSED: ${ev.closed_channels_sum}`)
+                lastClosed = ev.closed_channels_sum
+                console.log(ev.closed_channels_sum - lastClosed)
             }
         })
+
         return { openedChannel: opened, closedChannel: closed }
     }
 
@@ -136,3 +123,10 @@ export class TokenNetworkService {
             ]).sort({ 'blockTimestamp': 1 })
     }
 }
+
+    // var groupBy = function (xs, key) {
+    //     return xs.reduce(function (rv, x) {
+    //         (rv[x[key]] = rv[x[key]] || []).push(x);
+    //         return rv;
+    //     }, {});
+    // };

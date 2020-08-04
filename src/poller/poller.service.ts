@@ -42,7 +42,7 @@ export class PollerService implements OnModuleInit {
 
                 tokenNetworks.forEach(async tokenNetwork => {
                     await this.tokenNetworkCreatedModel.findOneAndUpdate({ transactionHash: tokenNetwork.transactionHash }, { $setOnInsert: tokenNetwork }, { upsert: true }).exec()
-                    await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address)
+                    await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address, tokenNetwork.blockTimestamp)
                 })
 
                 const tokenNetworkContracts: Contract[] = await Promise.all(

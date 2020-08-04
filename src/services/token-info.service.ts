@@ -24,8 +24,8 @@ export class TokenInfoService {
         }
     }
 
-    async saveTokenInfo(contractAddress: string, tokenNetworkAddress: string): Promise<TokenInfo> {
-        const tokenInfo: TokenInfoDto = { ...await this.getTokenInfo(contractAddress), tokenNetwork: tokenNetworkAddress }
+    async saveTokenInfo(contractAddress: string, tokenNetworkAddress: string, blockTimestamp: number): Promise<TokenInfo> {
+        const tokenInfo: TokenInfoDto = { ...await this.getTokenInfo(contractAddress), tokenNetwork: tokenNetworkAddress, blockTimestamp: blockTimestamp }
         return await this.tokenInfoModel.findOneAndUpdate({ contract: contractAddress.toLowerCase() }, tokenInfo, { upsert: true }).exec()
     }
 }

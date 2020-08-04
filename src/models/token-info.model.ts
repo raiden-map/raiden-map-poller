@@ -10,6 +10,7 @@ export class TokenInfo extends Document {
     @Prop() twitterName: string;
     @Prop() contract: string;
     @Prop() tokenNetwork: string;
+    @Prop() blockTimestamp: number;
 }
 
 export const TokenInfoSchema = SchemaFactory.createForClass(TokenInfo);

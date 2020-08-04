@@ -6,4 +6,6 @@ export class TokenInfoDto {
     twitterName: string;
     contract: string;
     tokenNetwork?: string;
+    blockTimestamp?: number;
+
 }

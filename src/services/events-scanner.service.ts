@@ -19,9 +19,13 @@ import { ChannelSettled } from 'src/models/channel-settled.model';
 import { ChannelWithdraw } from 'src/models/channel-withdraw.model';
 import { NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-proof-updated.model';
 import { ChannelOpenedDto } from 'src/models/dto/channel-opened.dto';
+import { TokenNetworkOverview } from 'src/models/token-network-overview.model';
+import { ChannelEventToFieldMap } from 'src/models/common/channel-event-to-field-map.common';
 
 @Injectable()
 export class EventsScannerService {
+    private overviewDate: string = ''
+    private tokenNetworkOverview: { [id: string]: TokenNetworkOverview } = {}
 
     constructor(
         @Inject('web3') private readonly web3: Web3,
@@ -31,6 +35,7 @@ export class EventsScannerService {
         @InjectModel(ChannelSettled.name) private readonly channelSettledModel: Model<ChannelSettled>,
         @InjectModel(ChannelWithdraw.name) private readonly channelWithdrawModel: Model<ChannelWithdraw>,
         @InjectModel(NonClosingBalanceProofUpdated.name) private readonly nonClosingBalanceProofUpdatedModel: Model<NonClosingBalanceProofUpdated>,
+        @InjectModel(TokenNetworkOverview.name) private readonly tokenNetworkOverviewModel: Model<TokenNetworkOverview>,
     ) { }
 
     async getEvents(contract: Contract, fromBlock: number | string, toBlock: number | string): Promise<EventDataExtended[]> {
@@ -74,22 +79,22 @@ export class EventsScannerService {
     private async saveEvent(event: EventDataExtended, contractAddress: string): Promise<EventMetadata> {
         switch (event.event) {
             case tokenNetworkEvents.channelOpened:
-                return this.plainToClassAndSaveOnDb(this.channelOpenedModel, ChannelOpenedDto, event)
+                return await this.plainToClassAndSaveOnDb(this.channelOpenedModel, ChannelOpenedDto, event)
 
             case tokenNetworkEvents.channelClosed:
-                return this.plainToClassAndSaveOnDb(this.channelClosedModel, ChannelClosedDto, event)
+                return await this.plainToClassAndSaveOnDb(this.channelClosedModel, ChannelClosedDto, event)
 
             case tokenNetworkEvents.channelNewDeposit:
-                return this.plainToClassAndSaveOnDb(this.channelNewDepositModel, ChannelNewDepositDto, event)
+                return await this.plainToClassAndSaveOnDb(this.channelNewDepositModel, ChannelNewDepositDto, event)
 
             case tokenNetworkEvents.channelSettled:
-                return this.plainToClassAndSaveOnDb(this.channelSettledModel, ChannelSettledDto, event)
+                return await this.plainToClassAndSaveOnDb(this.channelSettledModel, ChannelSettledDto, event)
 
             case tokenNetworkEvents.channelWithdraw:
-                return this.plainToClassAndSaveOnDb(this.channelWithdrawModel, ChannelWithdrawDto, event)
+                return await this.plainToClassAndSaveOnDb(this.channelWithdrawModel, ChannelWithdrawDto, event)
 
             case tokenNetworkEvents.nonClosingBalanceProofUpdated:
-                return this.plainToClassAndSaveOnDb(this.nonClosingBalanceProofUpdatedModel, NonClosingBalanceProofUpdatedDto, event)
+                return await this.plainToClassAndSaveOnDb(this.nonClosingBalanceProofUpdatedModel, NonClosingBalanceProofUpdatedDto, event)
 
             default:
                 Logger.debug("MISSING EVENT: " + event.event)
@@ -97,11 +102,63 @@ export class EventsScannerService {
         }
     }
 
-    private plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended) {
-
+    private async plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended) {
         const parsedEvent = plainToClass(type, event, { enableImplicitConversion: true, excludeExtraneousValues: true })
-        model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, parsedEvent, { upsert: true }).exec()
+        model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, parsedEvent, { upsert: true }, async (err, doc) => {
+            if (!doc) await this.updateOverview(event.event, event.blockTimestamp, event.address)
+        }).exec()
         return parsedEvent
+    }
+
+    private async updateOverview(eventType: string, eventTimestamp: number | string, tokenNetwork: string) {
+        return await this.tokenNetworkOverviewModel.findOneAndUpdate(
+            { tokenNetwork: tokenNetwork, },
+            { $inc: { [`${ChannelEventToFieldMap[eventType]}`]: 1, } },
+            { upsert: true, new: true },
+        ).exec()
+    }
+
+
+
+    private async createTokenNetworkOverview(date: number, tokenNetwork: string) {
+        const previousMonthYearDate: string = this.fromBlockTimestampToPreviousMonthYear(date)
+        const monthYearDate: string = this.fromBlockTimestampToMonthYear(date)
+        console.log(`Created new ${monthYearDate}  ${tokenNetwork}`)
+
+        const lastMonthOverview: TokenNetworkOverview = await this.tokenNetworkOverviewModel.findOne(
+            {
+                tokenNetwork: tokenNetwork,
+                month: previousMonthYearDate
+            }
+        ).exec()
+        return await this.tokenNetworkOverviewModel.findOneAndUpdate(
+            { tokenNetwork: tokenNetwork, month: monthYearDate },
+            {
+                $setOnInsert: {
+                    tokenNetwork: tokenNetwork,
+                    month: monthYearDate,
+                    channelOpened: 0,
+                    channelOpenedTot: lastMonthOverview ? lastMonthOverview.channelOpenedTot : 0,
+                    channelClosed: 0,
+                    channelClosedTot: lastMonthOverview ? lastMonthOverview.channelClosedTot : 0,
+                    channelSettled: 0,
+                    channelSettledTot: lastMonthOverview ? lastMonthOverview.channelSettledTot : 0,
+                    depositCount: 0,
+                    depositCountTot: lastMonthOverview ? lastMonthOverview.depositCountTot : 0,
+                    withdrawCount: 0,
+                    withdrawCountTot: lastMonthOverview ? lastMonthOverview.withdrawCountTot : 0,
+                }
+            },
+            { upsert: true, new: true },
+        ).exec()
+    }
+
+    fromBlockTimestampToMonthYear(blockTimeStamp: number) {
+        return `${new Date(blockTimeStamp).getUTCMonth() + 1}-${new Date(blockTimeStamp).getUTCFullYear()}`
+    }
+
+    fromBlockTimestampToPreviousMonthYear(blockTimeStamp: number) {
+        return `${new Date(blockTimeStamp).getUTCMonth()}-${new Date(blockTimeStamp).getUTCFullYear()}`
     }
 }
 

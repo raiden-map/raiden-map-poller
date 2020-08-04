@@ -16,6 +16,7 @@ import { ChannelClosed, ChannelClosedSchema } from 'src/models/channel-closed.mo
 import { ChannelOpened, ChannelOpenedSchema } from 'src/models/channel-opened.model';
 import { ChannelWithdrawSchema, ChannelWithdraw } from 'src/models/channel-withdraw.model';
 import { NonClosingBalanceProofUpdatedSchema, NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-proof-updated.model';
+import { TokenNetworkOverview, TokenNetworkOverviewSchema } from 'src/models/token-network-overview.model';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { NonClosingBalanceProofUpdatedSchema, NonClosingBalanceProofUpdated } fr
       { name: NonClosingBalanceProofUpdated.name, schema: NonClosingBalanceProofUpdatedSchema },
       { name: TokenNetworkCreated.name, schema: TokenNetworkCreatedSchema },
       { name: TokenInfo.name, schema: TokenInfoSchema },
+      { name: TokenNetworkOverview.name, schema: TokenNetworkOverviewSchema },
     ]),
   ],
   providers: [

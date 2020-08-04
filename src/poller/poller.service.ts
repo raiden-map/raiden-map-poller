@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { plainToClass } from 'class-transformer';
 import { Model } from 'mongoose';
@@ -24,31 +24,38 @@ export class PollerService implements OnModuleInit {
 
     async onModuleInit() {
 
-    }
-    async init() {
+        // }
+        // async init() {
         const tokenRegistryContractAddress: string = await this.smartContractService.getTokenRegistryContract()
         const tokenRegistryContract: Contract = await this.smartContractService.initContractObject(tokenRegistryContractAddress)
 
+
         //TODO call getAndSaveNewEvents or scanTokenNetworkContractEvents
-        const tokenNetworksEvent: EventDataExtended[] = await this.eventsScannerService.getAllEvents(tokenRegistryContract)
-        const tokenNetworks: TokenNetworkCreatedDto[] = tokenNetworksEvent.map(tokenNetwork => plainToClass(TokenNetworkCreatedDto, tokenNetwork, { enableImplicitConversion: true, excludeExtraneousValues: true }))
+        let blockNumber: number = 10000000 //TODO save lastblock on DB, use it here
+        setInterval(async () => {
+            Logger.debug(`...Scanning for new token network...`)
+            let lastBlock = await this.web3.eth.getBlockNumber()
+            const tokenNetworksEvent: EventDataExtended[] = await this.eventsScannerService.getEvents(tokenRegistryContract, blockNumber, lastBlock)
 
-        tokenNetworks.forEach(async tokenNetwork => {
-            await this.tokenNetworkCreatedModel.findOneAndUpdate({ transactionHash: tokenNetwork.transactionHash }, { $setOnInsert: tokenNetwork }, { upsert: true }).exec()
-            await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address)
-        })
+            if (tokenNetworksEvent.length > 0) {
+                const tokenNetworks: TokenNetworkCreatedDto[] = tokenNetworksEvent.map(tokenNetwork => plainToClass(TokenNetworkCreatedDto, tokenNetwork, { enableImplicitConversion: true, excludeExtraneousValues: true }))
 
-        const tokenNetworkContracts: Contract[] = await Promise.all(
-            tokenNetworks.map(
-                async tokenNetwork => await this.smartContractService.initContractObject(tokenNetwork.returnValues.token_network_address)
-            )
-        )
+                tokenNetworks.forEach(async tokenNetwork => {
+                    await this.tokenNetworkCreatedModel.findOneAndUpdate({ transactionHash: tokenNetwork.transactionHash }, { $setOnInsert: tokenNetwork }, { upsert: true }).exec()
+                    await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address)
+                })
 
-        tokenNetworkContracts.map(tnc => this.eventsScannerService.scanSmartContractEvents(tnc))
+                const tokenNetworkContracts: Contract[] = await Promise.all(
+                    tokenNetworks.map(
+                        async tokenNetwork => await this.smartContractService.initContractObject(tokenNetwork.returnValues.token_network_address)
+                    )
+                )
+
+                tokenNetworkContracts.map(tnc => this.eventsScannerService.scanSmartContractEvents(tnc))
+            }
+            blockNumber = lastBlock
+
+        }, 10000)
+
     }
-
-
-
-
-
 }

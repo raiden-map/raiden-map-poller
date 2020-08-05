@@ -11,7 +11,7 @@ export class TokenNetworkCreated extends Document implements IEventMetadata {
     @Prop() blockNumber: number;
     @Prop() logIndex: number;
     @Prop() removed: boolean;
-    @Prop() transactionHash: string;
+    @Prop({ unique: true }) transactionHash: string;
     @Prop() transactionIndex: number;
     @Prop() id: string;
     @Prop() event: string;

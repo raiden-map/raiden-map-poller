@@ -10,8 +10,8 @@ export class ChannelOpened extends Document implements IEventMetadata {
     @Prop() blockHash: string;
     @Prop() blockNumber: number;
     @Prop() logIndex: number;
-    @Prop() removed: boolean;    
-    @Prop() transactionHash: string;
+    @Prop() removed: boolean;
+    @Prop({ unique: true }) transactionHash: string;
     @Prop() transactionIndex: number;
     @Prop() id: string;
     @Prop() event: string;

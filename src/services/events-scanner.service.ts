@@ -21,6 +21,11 @@ import { NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-pr
 import { ChannelOpenedDto } from 'src/models/dto/channel-opened.dto';
 import { TokenNetworkOverview } from 'src/models/token-network-overview.model';
 import { ChannelEventToFieldMap } from 'src/models/common/channel-event-to-field-map.common';
+import { ChannelTimelineOverview } from 'src/models/channel-timeline-overview.model';
+import { ChannelOpenedRepository } from 'src/repositories/channel-opened.repository';
+import { ChannelClosedRepository } from 'src/repositories/channel-closed.repository';
+import { ChannelOpenedStatus, ChannelClosedStatus, ChannelEventsStatus } from 'src/models/common/channel-event-status.common';
+import { ChannelTimelineOverviewDto } from 'src/models/dto/channel-timeline-overview.dto';
 
 @Injectable()
 export class EventsScannerService {
@@ -29,6 +34,8 @@ export class EventsScannerService {
 
     constructor(
         @Inject('web3') private readonly web3: Web3,
+        private readonly channelOpenedRepository: ChannelOpenedRepository,
+        private readonly channelClosedRepository: ChannelClosedRepository,
         @InjectModel(ChannelClosed.name) private readonly channelClosedModel: Model<ChannelClosed>,
         @InjectModel(ChannelNewDeposit.name) private readonly channelNewDepositModel: Model<ChannelNewDeposit>,
         @InjectModel(ChannelOpened.name) private readonly channelOpenedModel: Model<ChannelOpened>,
@@ -36,6 +43,7 @@ export class EventsScannerService {
         @InjectModel(ChannelWithdraw.name) private readonly channelWithdrawModel: Model<ChannelWithdraw>,
         @InjectModel(NonClosingBalanceProofUpdated.name) private readonly nonClosingBalanceProofUpdatedModel: Model<NonClosingBalanceProofUpdated>,
         @InjectModel(TokenNetworkOverview.name) private readonly tokenNetworkOverviewModel: Model<TokenNetworkOverview>,
+        @InjectModel(ChannelTimelineOverview.name) private readonly channelTimelineOverviewModel: Model<ChannelTimelineOverview>,
     ) { }
 
     async getEvents(contract: Contract, fromBlock: number | string, toBlock: number | string): Promise<EventDataExtended[]> {
@@ -56,16 +64,20 @@ export class EventsScannerService {
         return eventsDataExt
     }
 
-    async scanSmartContractEvents(contract: Contract) {
-        let blockNumber: number = 10000000 //TODO save lastblock on DB, use it here
+    scanSmartContractEvents(contract: Contract) {
+        let blockNumber: number = 10100000//TODO save lastblock on DB, use it here
+        let lastBlock = 0
+
         setInterval(async () => {
-            let lastBlock = await this.web3.eth.getBlockNumber()
+            lastBlock = await this.web3.eth.getBlockNumber()
             if (lastBlock > blockNumber) {
                 Logger.debug(`Check for new events on contract: ${contract.options.address}. From ${blockNumber} to ${lastBlock}`)
-                this.getAndSaveNewEvents(contract, blockNumber, lastBlock)
-                blockNumber = lastBlock
+                const events = await this.getAndSaveNewEvents(contract, blockNumber, lastBlock)
+                if (events.length > 0)
+                    await this.updateTimeline(contract.options.address, blockNumber)
+                blockNumber = ++lastBlock
             }
-        }, 10000)
+        }, 2 * 1000)
 
     }
 
@@ -104,7 +116,7 @@ export class EventsScannerService {
 
     private async plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended) {
         const parsedEvent = plainToClass(type, event, { enableImplicitConversion: true, excludeExtraneousValues: true })
-        model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, parsedEvent, { upsert: true }, async (err, doc) => {
+        await model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, parsedEvent, { upsert: true }, async (err, doc) => {
             if (!doc) await this.updateOverview(event.event, event.blockTimestamp, event.address)
         }).exec()
         return parsedEvent
@@ -118,6 +130,55 @@ export class EventsScannerService {
         ).exec()
     }
 
+    private async updateTimeline(contract: string, block: number) {
+        let lastChannelTimeline: ChannelTimelineOverview = await this.channelTimelineOverviewModel.findOne({ tokenNetwork: contract }).exec()
+        let lastOpenedCount = lastChannelTimeline ? lastChannelTimeline.channelOpened[lastChannelTimeline.channelOpened.length - 1].opened_channels_sum : 0
+        let lastClosedCount = lastChannelTimeline ? lastChannelTimeline.channelClosed[lastChannelTimeline.channelClosed.length - 1].closed_channels_sum : 0
+        const channelsOpened: ChannelOpenedStatus[] = await this.channelOpenedRepository.getOpenedChannelTimelineOverviewOfFromBlock(contract, block)
+        const channelsClosed: ChannelClosedStatus[] = await this.channelClosedRepository.getClosedChannelTimelineOverviewOfFromBlock(contract, block)
+
+        let res: ChannelEventsStatus[] = channelsOpened.concat(channelsClosed).sort((a, b) => a.blockTimestamp - b.blockTimestamp)
+
+        //opened channel go down when closed channel go up
+        let closedCount = 0
+        res.map((event: any) => {
+            if (event.closed_channels_sum) closedCount += (event.closed_channels_sum - closedCount)
+            else event.opened_channels_sum -= closedCount
+        })
+
+        let newChannelTimeline: ChannelTimelineOverviewDto = { tokenNetwork: contract, ...this.fillMissingEvent(res, lastOpenedCount, lastClosedCount) }
+        if (lastChannelTimeline) {
+            lastChannelTimeline.channelOpened = lastChannelTimeline.channelOpened.concat(newChannelTimeline.channelOpened)
+            lastChannelTimeline.channelClosed = lastChannelTimeline.channelClosed.concat(newChannelTimeline.channelClosed)
+            await lastChannelTimeline.updateOne(lastChannelTimeline).exec()
+        } else {
+            await (new this.channelTimelineOverviewModel(newChannelTimeline)).save()
+        }
+
+    }
+
+    private fillMissingEvent(res: any[], lastOpenedCount: number, lastClosedCount: number): { channelOpened: ChannelOpenedStatus[], channelClosed: ChannelClosedStatus[] } {
+        let opened: ChannelOpenedStatus[] = []
+        let closed: ChannelClosedStatus[] = []
+        let lastOpened = 0
+        let lastClosed = 0
+
+        res.forEach(ev => {
+            if (ev.opened_channels_sum) {
+                opened.push(ev)
+                closed.push({ blockTimestamp: ev.blockTimestamp, closed_channels_sum: lastClosed })
+                lastOpened = ev.opened_channels_sum
+            } else {
+                opened.push({ blockTimestamp: ev.blockTimestamp, opened_channels_sum: lastOpened - (ev.closed_channels_sum - lastClosed) })
+                closed.push(ev)
+                lastOpened -= (ev.closed_channels_sum - lastClosed)
+                lastClosed = ev.closed_channels_sum
+            }
+        })
+        opened.map(op => op.opened_channels_sum += lastOpenedCount)
+        closed.map(op => op.closed_channels_sum += lastClosedCount)
+        return { channelOpened: opened, channelClosed: closed }
+    }
 
 
     private async createTokenNetworkOverview(date: number, tokenNetwork: string) {

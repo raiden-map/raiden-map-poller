@@ -17,6 +17,9 @@ import { ChannelOpened, ChannelOpenedSchema } from 'src/models/channel-opened.mo
 import { ChannelWithdrawSchema, ChannelWithdraw } from 'src/models/channel-withdraw.model';
 import { NonClosingBalanceProofUpdatedSchema, NonClosingBalanceProofUpdated } from 'src/models/non-closing-balance-proof-updated.model';
 import { TokenNetworkOverview, TokenNetworkOverviewSchema } from 'src/models/token-network-overview.model';
+import { ChannelTimelineOverviewSchema, ChannelTimelineOverview } from 'src/models/channel-timeline-overview.model';
+import { ChannelClosedRepository } from 'src/repositories/channel-closed.repository';
+import { ChannelOpenedRepository } from 'src/repositories/channel-opened.repository';
 
 @Module({
   imports: [
@@ -31,6 +34,7 @@ import { TokenNetworkOverview, TokenNetworkOverviewSchema } from 'src/models/tok
       { name: TokenNetworkCreated.name, schema: TokenNetworkCreatedSchema },
       { name: TokenInfo.name, schema: TokenInfoSchema },
       { name: TokenNetworkOverview.name, schema: TokenNetworkOverviewSchema },
+      { name: ChannelTimelineOverview.name, schema: ChannelTimelineOverviewSchema },
     ]),
   ],
   providers: [
@@ -39,6 +43,8 @@ import { TokenNetworkOverview, TokenNetworkOverviewSchema } from 'src/models/tok
     EventsScannerService,
     TokenInfoService,
     ToTokenInfoPipe,
+    ChannelClosedRepository,
+    ChannelOpenedRepository,
     {
       provide: 'web3',
       useFactory: () => new Web3(environments.ethMainnetNode),

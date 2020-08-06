@@ -51,7 +51,7 @@ export class EventsScannerService {
         const eventsDataExt: EventDataExtended[] = await Promise.all(eventsData.map(async (event: EventData) => {
             return { ...event, blockTimestamp: parseInt(((await this.web3.eth.getBlock(event.blockNumber)).timestamp).toString() + '000') }
         }))
-        Logger.debug(`${this.getEvents.name}: ${contract.options.address} . From ${fromBlock} to ${toBlock}`)
+        //Logger.debug(`${this.getEvents.name}: ${contract.options.address} . From ${fromBlock} to ${toBlock}`)
         return eventsDataExt
     }
 
@@ -64,20 +64,25 @@ export class EventsScannerService {
         return eventsDataExt
     }
 
-    scanSmartContractEvents(contract: Contract) {
+    async scanSmartContractEvents(contract: Contract) {
         let blockNumber: number = 10100000//TODO save lastblock on DB, use it here
-        let lastBlock = 0
+        Logger.debug(`Start: ${contract.options.address}.`)
 
-        setInterval(async () => {
-            lastBlock = await this.web3.eth.getBlockNumber()
-            if (lastBlock > blockNumber) {
-                Logger.debug(`Check for new events on contract: ${contract.options.address}. From ${blockNumber} to ${lastBlock}`)
-                const events = await this.getAndSaveNewEvents(contract, blockNumber, lastBlock)
-                if (events.length > 0)
-                    await this.updateTimeline(contract.options.address, blockNumber)
-                blockNumber = ++lastBlock
-            }
-        }, 2 * 1000)
+        setInterval(() => {
+            this.web3.eth.getBlockNumber().then(lastBlock => {
+                if (lastBlock > blockNumber) {
+                    //Logger.debug(`Check for new events on contract: ${contract.options.address}. From ${blockNumber} to ${lastBlock}`)
+                    this.getAndSaveNewEvents(contract, blockNumber, lastBlock).then(events => {
+                        if (events.length > 0)
+                            this.updateTimeline(contract.options.address, blockNumber)
+                                .then(() => {
+                                    blockNumber = lastBlock + 1
+                                    Logger.debug(`Timeline updated: ${contract.options.address}`)
+                                })
+                    })
+                }
+            })
+        }, 20000)
 
     }
 
@@ -116,7 +121,7 @@ export class EventsScannerService {
 
     private async plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended) {
         const parsedEvent = plainToClass(type, event, { enableImplicitConversion: true, excludeExtraneousValues: true })
-        await model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, parsedEvent, { upsert: true }, async (err, doc) => {
+        await model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, { $setOnInsert: parsedEvent }, { upsert: true }, async (err, doc) => {
             if (!doc) await this.updateOverview(event.event, event.blockTimestamp, event.address)
         }).exec()
         return parsedEvent
@@ -132,6 +137,7 @@ export class EventsScannerService {
 
     private async updateTimeline(contract: string, block: number) {
         let lastChannelTimeline: ChannelTimelineOverview = await this.channelTimelineOverviewModel.findOne({ tokenNetwork: contract }).exec()
+        console.log(lastChannelTimeline)
         let lastOpenedCount = lastChannelTimeline ? lastChannelTimeline.channelOpened[lastChannelTimeline.channelOpened.length - 1].opened_channels_sum : 0
         let lastClosedCount = lastChannelTimeline ? lastChannelTimeline.channelClosed[lastChannelTimeline.channelClosed.length - 1].closed_channels_sum : 0
         const channelsOpened: ChannelOpenedStatus[] = await this.channelOpenedRepository.getOpenedChannelTimelineOverviewOfFromBlock(contract, block)
@@ -147,6 +153,7 @@ export class EventsScannerService {
         })
 
         let newChannelTimeline: ChannelTimelineOverviewDto = { tokenNetwork: contract, ...this.fillMissingEvent(res, lastOpenedCount, lastClosedCount) }
+
         if (lastChannelTimeline) {
             lastChannelTimeline.channelOpened = lastChannelTimeline.channelOpened.concat(newChannelTimeline.channelOpened)
             lastChannelTimeline.channelClosed = lastChannelTimeline.channelClosed.concat(newChannelTimeline.channelClosed)

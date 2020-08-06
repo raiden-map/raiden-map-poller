@@ -35,30 +35,28 @@ export class PollerService implements OnModuleInit {
         let tokenNetworksEvent: EventDataExtended[]
         let tokenNetworks: TokenNetworkCreatedDto[]
         let tokenNetworkContracts: Contract[]
-        setInterval(async () => {
-            Logger.debug(`...Scanning for new token network...`)
-            let lastBlock = await this.web3.eth.getBlockNumber()
-            if (lastBlock > blockNumber) {
-
-                tokenNetworksEvent = await this.eventsScannerService.getEvents(tokenRegistryContract, blockNumber, lastBlock)
-
-                if (tokenNetworksEvent.length > 0) {
-                    tokenNetworks = tokenNetworksEvent.map(tokenNetwork => plainToClass(TokenNetworkCreatedDto, tokenNetwork, { enableImplicitConversion: true, excludeExtraneousValues: true }))
-
-                    await tokenNetworks.forEach(async tokenNetwork => {
-                        await this.tokenNetworkCreatedModel.findOneAndUpdate({ transactionHash: tokenNetwork.transactionHash }, { $setOnInsert: tokenNetwork }, { upsert: true }).exec()
-                        await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address, tokenNetwork.blockTimestamp)
+        setInterval(() => {
+            this.web3.eth.getBlockNumber().then(lastBlock => {
+                Logger.debug(`Scanning for new token network from : ${blockNumber} to ${lastBlock}`)
+                if (lastBlock > blockNumber) {
+                    this.eventsScannerService.getEvents(tokenRegistryContract, blockNumber, lastBlock).then(tokenNetworksEvent => {
+                        if (tokenNetworksEvent.length > 0) {
+                            tokenNetworksEvent
+                                .map(tokenNetwork => plainToClass(TokenNetworkCreatedDto, tokenNetwork, { enableImplicitConversion: true, excludeExtraneousValues: true }))
+                                .map(async (tokenNetwork: TokenNetworkCreatedDto) => {
+                                    await this.tokenNetworkCreatedModel.findOneAndUpdate({ transactionHash: tokenNetwork.transactionHash }, { $setOnInsert: tokenNetwork }, { upsert: true }).exec()
+                                    await this.tokenInfoService.saveTokenInfo(tokenNetwork.returnValues.token_address, tokenNetwork.returnValues.token_network_address, tokenNetwork.blockTimestamp)
+                                    Logger.debug(`TokenNetwork getted: ${tokenNetwork.address}`)
+                                    return tokenNetwork
+                                })
+                                .map(async (tokenNetwork: Promise<TokenNetworkCreatedDto>) => await this.smartContractService.initContractObject((await tokenNetwork).returnValues.token_network_address))
+                                .map(async (contract: Promise<Contract>) => await this.eventsScannerService.scanSmartContractEvents(await contract))
+                        }
                     })
-
-                    Promise.all(
-                        tokenNetworks.map(
-                            async tokenNetwork => await this.smartContractService.initContractObject(tokenNetwork.returnValues.token_network_address)))
-                        .then(tokenNetworkContracts => tokenNetworkContracts.map(tnc => this.eventsScannerService.scanSmartContractEvents(tnc))
-                        )
                 }
                 blockNumber = ++lastBlock
-            }
-        }, 10*1000)
+            })
+        }, 50000)
 
     }
 }

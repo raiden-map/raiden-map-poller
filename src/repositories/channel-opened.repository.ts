@@ -47,7 +47,6 @@ export class ChannelOpenedRepository {
                 },
                 { $project: { _id: 0 } }
             ]).sort({ 'blockTimestamp': 1 }))
-
         channelsOpened.map((channel, index) => { if (index > 0) channel.opened_channels_sum += channelsOpened[index - 1].opened_channels_sum })
         return channelsOpened
     }

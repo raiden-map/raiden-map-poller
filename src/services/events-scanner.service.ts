@@ -74,7 +74,7 @@ export class EventsScannerService {
                     //Logger.debug(`Check for new events on contract: ${contract.options.address}. From ${blockNumber} to ${lastBlock}`)
                     this.getAndSaveNewEvents(contract, blockNumber, lastBlock).then(events => {
                         if (events.length > 0)
-                            this.updateTimeline(contract.options.address, blockNumber)
+                            this.updateTimeline(contract.options.address, blockNumber, events[0].blockTimestamp)
                                 .then(() => {
                                     blockNumber = lastBlock + 1
                                     Logger.debug(`Timeline updated: ${contract.options.address}`)
@@ -135,32 +135,34 @@ export class EventsScannerService {
         ).exec()
     }
 
-    private async updateTimeline(contract: string, block: number) {
+    private async updateTimeline(contract: string, block: number, blockTimeStamp: number) {
         let lastChannelTimeline: ChannelTimelineOverview = await this.channelTimelineOverviewModel.findOne({ tokenNetwork: contract }).exec()
-        let lastOpenedCount = lastChannelTimeline ? lastChannelTimeline.channelOpened[lastChannelTimeline.channelOpened.length - 1].opened_channels_sum : 0
-        let lastClosedCount = lastChannelTimeline ? lastChannelTimeline.channelClosed[lastChannelTimeline.channelClosed.length - 1].closed_channels_sum : 0
-        const channelsOpened: ChannelOpenedStatus[] = await this.channelOpenedRepository.getOpenedChannelTimelineOverviewOfFromBlock(contract, block)
-        const channelsClosed: ChannelClosedStatus[] = await this.channelClosedRepository.getClosedChannelTimelineOverviewOfFromBlock(contract, block)
+        let lastBlockTimestamp = lastChannelTimeline ? lastChannelTimeline.channelOpened[lastChannelTimeline.channelOpened.length - 1].blockTimestamp : 0
+        if (lastBlockTimestamp < blockTimeStamp) {
+            let lastOpenedCount = lastChannelTimeline ? lastChannelTimeline.channelOpened[lastChannelTimeline.channelOpened.length - 1].opened_channels_sum : 0
+            let lastClosedCount = lastChannelTimeline ? lastChannelTimeline.channelClosed[lastChannelTimeline.channelClosed.length - 1].closed_channels_sum : 0
+            const channelsOpened: ChannelOpenedStatus[] = await this.channelOpenedRepository.getOpenedChannelTimelineOverviewOfFromBlock(contract, block)
+            const channelsClosed: ChannelClosedStatus[] = await this.channelClosedRepository.getClosedChannelTimelineOverviewOfFromBlock(contract, block)
 
-        let res: ChannelEventsStatus[] = channelsOpened.concat(channelsClosed).sort((a, b) => a.blockTimestamp - b.blockTimestamp)
+            let res: ChannelEventsStatus[] = channelsOpened.concat(channelsClosed).sort((a, b) => a.blockTimestamp - b.blockTimestamp)
 
-        //opened channel go down when closed channel go up
-        let closedCount = 0
-        res.map((event: any) => {
-            if (event.closed_channels_sum) closedCount += (event.closed_channels_sum - closedCount)
-            else event.opened_channels_sum -= closedCount
-        })
+            //opened channel go down when closed channel go up
+            let closedCount = 0
+            res.map((event: any) => {
+                if (event.closed_channels_sum) closedCount += (event.closed_channels_sum - closedCount)
+                else event.opened_channels_sum -= closedCount
+            })
 
-        let newChannelTimeline: ChannelTimelineOverviewDto = { tokenNetwork: contract, ...this.fillMissingEvent(res, lastOpenedCount, lastClosedCount) }
+            let newChannelTimeline: ChannelTimelineOverviewDto = { tokenNetwork: contract, ...this.fillMissingEvent(res, lastOpenedCount, lastClosedCount) }
 
-        if (lastChannelTimeline) {
-            lastChannelTimeline.channelOpened = lastChannelTimeline.channelOpened.concat(newChannelTimeline.channelOpened)
-            lastChannelTimeline.channelClosed = lastChannelTimeline.channelClosed.concat(newChannelTimeline.channelClosed)
-            await lastChannelTimeline.updateOne(lastChannelTimeline).exec()
-        } else {
-            await (new this.channelTimelineOverviewModel(newChannelTimeline)).save()
+            if (lastChannelTimeline) {
+                lastChannelTimeline.channelOpened = lastChannelTimeline.channelOpened.concat(newChannelTimeline.channelOpened)
+                lastChannelTimeline.channelClosed = lastChannelTimeline.channelClosed.concat(newChannelTimeline.channelClosed)
+                await lastChannelTimeline.updateOne(lastChannelTimeline).exec()
+            } else {
+                await (new this.channelTimelineOverviewModel(newChannelTimeline)).save()
+            }
         }
-
     }
 
     private fillMissingEvent(res: any[], lastOpenedCount: number, lastClosedCount: number): { channelOpened: ChannelOpenedStatus[], channelClosed: ChannelClosedStatus[] } {

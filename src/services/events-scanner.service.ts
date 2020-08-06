@@ -82,7 +82,7 @@ export class EventsScannerService {
                     })
                 }
             })
-        }, 20000)
+        }, 2 * 60000)
 
     }
 
@@ -137,7 +137,6 @@ export class EventsScannerService {
 
     private async updateTimeline(contract: string, block: number) {
         let lastChannelTimeline: ChannelTimelineOverview = await this.channelTimelineOverviewModel.findOne({ tokenNetwork: contract }).exec()
-        console.log(lastChannelTimeline)
         let lastOpenedCount = lastChannelTimeline ? lastChannelTimeline.channelOpened[lastChannelTimeline.channelOpened.length - 1].opened_channels_sum : 0
         let lastClosedCount = lastChannelTimeline ? lastChannelTimeline.channelClosed[lastChannelTimeline.channelClosed.length - 1].closed_channels_sum : 0
         const channelsOpened: ChannelOpenedStatus[] = await this.channelOpenedRepository.getOpenedChannelTimelineOverviewOfFromBlock(contract, block)

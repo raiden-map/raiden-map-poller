@@ -56,7 +56,7 @@ export class PollerService implements OnModuleInit {
                 }
                 blockNumber = ++lastBlock
             })
-        }, 50000)
+        }, 7 * 60000)
 
     }
 }

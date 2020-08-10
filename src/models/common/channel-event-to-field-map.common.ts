@@ -4,4 +4,6 @@ export const ChannelEventToFieldMap = {
     ChannelSettled: "channelSettled",
     ChannelNewDeposit: "depositCount",
     ChannelWithdraw: "withdrawCount",
+    DepositAmount: "depositAmount",
+    WithdrawAmount: "withdrawAmount"
 }

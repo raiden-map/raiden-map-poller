@@ -102,13 +102,17 @@ export class EventsScannerService {
                 return await this.plainToClassAndSaveOnDb(this.channelClosedModel, ChannelClosedDto, event)
 
             case tokenNetworkEvents.channelNewDeposit:
-                return await this.plainToClassAndSaveOnDb(this.channelNewDepositModel, ChannelNewDepositDto, event)
+                const newDepositEvent: ChannelNewDepositDto = await this.plainToClassAndSaveOnDb(this.channelNewDepositModel, ChannelNewDepositDto, event) as ChannelNewDepositDto
+                if (newDepositEvent) this.updateOverview("DepositAmount", newDepositEvent.blockTimestamp, newDepositEvent.address, newDepositEvent.returnValues.total_deposit / 1000000000000000000)
+                return newDepositEvent
 
             case tokenNetworkEvents.channelSettled:
                 return await this.plainToClassAndSaveOnDb(this.channelSettledModel, ChannelSettledDto, event)
 
             case tokenNetworkEvents.channelWithdraw:
-                return await this.plainToClassAndSaveOnDb(this.channelWithdrawModel, ChannelWithdrawDto, event)
+                const withdrawEvent: ChannelWithdrawDto = await this.plainToClassAndSaveOnDb(this.channelWithdrawModel, ChannelWithdrawDto, event) as ChannelWithdrawDto
+                if (withdrawEvent) this.updateOverview("WithdrawAmount", withdrawEvent.blockTimestamp, withdrawEvent.address, withdrawEvent.returnValues.total_withdraw / 1000000000000000000)
+                return withdrawEvent
 
             case tokenNetworkEvents.nonClosingBalanceProofUpdated:
                 return await this.plainToClassAndSaveOnDb(this.nonClosingBalanceProofUpdatedModel, NonClosingBalanceProofUpdatedDto, event)
@@ -119,18 +123,26 @@ export class EventsScannerService {
         }
     }
 
-    private async plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended) {
+    private async plainToClassAndSaveOnDb(model: Model<Document>, type: ClassType<any>, event: EventDataExtended): Promise<EventMetadata> {
         const parsedEvent = plainToClass(type, event, { enableImplicitConversion: true, excludeExtraneousValues: true })
-        await model.findOneAndUpdate({ transactionHash: parsedEvent.transactionHash }, { $setOnInsert: parsedEvent }, { upsert: true }, async (err, doc) => {
-            if (!doc) await this.updateOverview(event.event, event.blockTimestamp, event.address)
-        }).exec()
-        return parsedEvent
+        try {
+            return model.findOne({ transactionHash: parsedEvent.transactionHash }).exec().then(async eventDoc => {
+                if (!eventDoc) {
+                    const saved = await (new model(parsedEvent)).save()
+                    await this.updateOverview(event.event, event.blockTimestamp, event.address)
+                    return parsedEvent
+                }
+            })
+        } catch (error) {
+            console.log(event)
+        }
+        return
     }
 
-    private async updateOverview(eventType: string, eventTimestamp: number | string, tokenNetwork: string) {
+    private async updateOverview(eventType: string, eventTimestamp: number | string, tokenNetwork: string, quantity: number = 1) {
         return await this.tokenNetworkOverviewModel.findOneAndUpdate(
             { tokenNetwork: tokenNetwork, },
-            { $inc: { [`${ChannelEventToFieldMap[eventType]}`]: 1, } },
+            { $inc: { [`${ChannelEventToFieldMap[eventType]}`]: quantity, } },
             { upsert: true, new: true },
         ).exec()
     }

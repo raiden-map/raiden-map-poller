@@ -5,7 +5,7 @@ import { PollerController } from './poller.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SmartContractService } from 'src/services/smart-contract.service';
 import { EventsScannerService } from 'src/services/events-scanner.service';
-import { environments } from 'src/environments/environments';
+import { environments } from 'src/environments';
 import { TokenInfoService } from 'src/services/token-info.service';
 import { ToTokenInfoPipe } from 'src/pipes/to-token-info.pipe';
 import { TokenNetworkCreated, TokenNetworkCreatedSchema } from 'src/models/token-network-created.model';

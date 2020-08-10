@@ -1,5 +1,5 @@
 import { HttpException, HttpService, HttpStatus, Injectable } from '@nestjs/common';
-import { environments } from 'src/environments/environments';
+import { environments } from 'src/environments';
 import { TokenInfoDto } from 'src/models/dto/token-info.dto';
 import { ToTokenInfoPipe } from 'src/pipes/to-token-info.pipe';
 import { TokenInfo } from 'src/models/token-info.model';

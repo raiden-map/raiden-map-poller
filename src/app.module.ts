@@ -3,7 +3,7 @@ import { AppService } from './app.service';
 import { PollerModule } from './poller/poller.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TokenNetworkModule } from './token-network/token-network.module';
-import { environments } from './environments/environments';
+import { environments } from './environments';
 import { AppController } from 'src/app.controller';
 
 //const mongodb = 'mongodb://localhost:27017/raiden-map'

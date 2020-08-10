@@ -1,5 +1,5 @@
 import { Injectable, HttpService, HttpException, HttpStatus, Inject, Logger } from '@nestjs/common';
-import { environments } from 'src/environments/environments';
+import { environments } from 'src/environments';
 import { Contract } from 'web3-eth-contract';
 import Web3 from 'web3';
 

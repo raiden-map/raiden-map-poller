@@ -35,3 +35,4 @@ lerna-debug.log*
 
 
 src/environments/environments.ts
+src/environments.ts

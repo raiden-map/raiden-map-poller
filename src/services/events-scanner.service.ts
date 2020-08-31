@@ -73,7 +73,7 @@ export class EventsScannerService {
                 if (lastBlock > blockNumber) {
                     //Logger.debug(`Check for new events on contract: ${contract.options.address}. From ${blockNumber} to ${lastBlock}`)
                     this.getAndSaveNewEvents(contract, blockNumber, lastBlock).then(events => {
-                        if (events.length > 0)
+                        if (events.length > 0 && events[0] !== undefined)
                             this.updateTimeline(contract.options.address, blockNumber, events[0].blockTimestamp)
                                 .then(() => {
                                     blockNumber = lastBlock + 1
@@ -87,10 +87,10 @@ export class EventsScannerService {
     }
 
     async getAndSaveNewEvents(contract: Contract, fromBlock: number | string, toBlock: number | string) {
-        const eventsDataExt: EventDataExtended[] = await this.getEvents(contract, fromBlock, toBlock)
+        const eventsDataExt: EventDataExtended[] = await this.getEvents(contract, fromBlock, toBlock )
         let events: EventMetadata[] = await Promise.all(eventsDataExt.map(async (event: EventDataExtended) => await this.saveEvent(event, contract.options.address)))
         Logger.debug(`Getted and saved if not present ${events.length} events from contract: ${contract.options.address}. From ${fromBlock} to ${toBlock}`)
-        return events
+        return events.filter(ev => ev !== undefined)
     }
 
     private async saveEvent(event: EventDataExtended, contractAddress: string): Promise<EventMetadata> {
@@ -168,8 +168,8 @@ export class EventsScannerService {
             let newChannelTimeline: ChannelTimelineOverviewDto = { tokenNetwork: contract, ...this.fillMissingEvent(res, lastOpenedCount, lastClosedCount) }
 
             if (lastChannelTimeline) {
-                lastChannelTimeline.channelOpened = lastChannelTimeline.channelOpened.concat(newChannelTimeline.channelOpened)
-                lastChannelTimeline.channelClosed = lastChannelTimeline.channelClosed.concat(newChannelTimeline.channelClosed)
+                lastChannelTimeline.channelOpened = newChannelTimeline.channelOpened
+                lastChannelTimeline.channelClosed = newChannelTimeline.channelClosed
                 await lastChannelTimeline.updateOne(lastChannelTimeline).exec()
             } else {
                 await (new this.channelTimelineOverviewModel(newChannelTimeline)).save()

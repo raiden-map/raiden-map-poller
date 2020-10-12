@@ -31,7 +31,7 @@ export class PollerService implements OnModuleInit {
 
 
         //TODO call getAndSaveNewEvents or scanTokenNetworkContractEvents
-        let blockNumber: number = 10000000 //TODO save lastblock on DB, use it here
+        let blockNumber = 10000000 //TODO save lastblock on DB, use it here
         let tokenNetworksEvent: EventDataExtended[]
         let tokenNetworks: TokenNetworkCreatedDto[]
         let tokenNetworkContracts: Contract[]

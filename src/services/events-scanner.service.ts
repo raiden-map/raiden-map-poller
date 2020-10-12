@@ -76,11 +76,11 @@ export class EventsScannerService {
                         if (events.length > 0 && events[0] !== undefined)
                             this.updateTimeline(contract.options.address, blockNumber, events[0].blockTimestamp)
                                 .then(() => {
+                                    blockNumber = lastBlock + 1
                                     Logger.debug(`Timeline updated: ${contract.options.address}`)
                                 })
                     })
                 }
-                blockNumber = lastBlock + 1
             })
         }, 2 * 60000)
 

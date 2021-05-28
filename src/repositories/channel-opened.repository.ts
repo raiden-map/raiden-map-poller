@@ -35,7 +35,7 @@ export class ChannelOpenedRepository {
     async getOpenedChannelTimelineOverviewOfFromBlock(contract: string, block: number) {
         const channelsOpened = (await this.channelOpenedModel
             .aggregate([
-                { $match: { address: contract, blockNumber: { $gte: block } } },
+                { $match: { address: contract, blockNumber: { $gte: Number(block) } } },
                 {
                     $group: {
                         _id: { blockTimestamp: "$blockTimestamp" },

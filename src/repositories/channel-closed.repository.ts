@@ -37,7 +37,7 @@ export class ChannelClosedRepository {
     async getClosedChannelTimelineOverviewOfFromBlock(contract: string, block: number) {
         const channelsClosed = (await this.channelClosedModel
             .aggregate([
-                { $match: { address: contract, blockNumber: { $gte: block } } },
+                { $match: { address: contract, blockNumber: { $gte: Number(block) } } },
                 {
                     $group: {
                         _id: { blockTimestamp: "$blockTimestamp" },
